@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, simpledialog
+from tkinter import ttk, filedialog, messagebox, simpledialog, colorchooser
 import numpy as np
 import json
 import os
@@ -39,6 +39,29 @@ class DevelopmentCurveSimulator:
         self.pt3_label = tk.StringVar(value="Release")
         self.show_x_ticks = tk.BooleanVar(value=True)
 
+        # Variables for Text Styling
+        self.style_fonts = {
+            "title": tk.StringVar(value="sans-serif"),
+            "axes": tk.StringVar(value="sans-serif"),
+            "ticks": tk.StringVar(value="sans-serif"),
+            "legend": tk.StringVar(value="sans-serif"),
+            "annot": tk.StringVar(value="sans-serif")
+        }
+        self.style_sizes = {
+            "title": tk.IntVar(value=14),
+            "axes": tk.IntVar(value=12),
+            "ticks": tk.IntVar(value=10),
+            "legend": tk.IntVar(value=10),
+            "annot": tk.IntVar(value=10)
+        }
+        self.style_colors = {
+            "title": tk.StringVar(value="#000000"),
+            "axes": tk.StringVar(value="#000000"),
+            "ticks": tk.StringVar(value="#000000"),
+            "legend": tk.StringVar(value="#000000"),
+            "annot": tk.StringVar(value="#ff0000")
+        }
+
         self.active_setting_name = None
         self.clean_state_dict = None
         
@@ -55,35 +78,45 @@ class DevelopmentCurveSimulator:
 
     def setup_ui(self):
         # Main layout frames
-        control_frame = ttk.Frame(self.root, padding="10", width=350)
-        control_frame.pack(side=tk.LEFT, fill=tk.Y)
+        self.left_panel = ttk.Frame(self.root, padding="10", width=350)
+        self.left_panel.pack(side=tk.LEFT, fill=tk.Y)
         
         self.plot_frame = ttk.Frame(self.root, padding="10")
         self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        # Build Controls
-        self.build_phase_controls(control_frame, "Phase 1", self.p1_name, self.p1_duration, self.p1_milestone, self.p1_curve, 1, 36)
-        ttk.Separator(control_frame, orient='horizontal').pack(fill='x', pady=10)
-        
-        self.build_phase_controls(control_frame, "Phase 2", self.p2_name, self.p2_duration, self.p2_milestone, self.p2_curve, 1, 12)
-        ttk.Separator(control_frame, orient='horizontal').pack(fill='x', pady=10)
-        
-        # Phase 3 (No milestone, it always ends at 100%)
-        self.build_phase_controls(control_frame, "Phase 3", self.p3_name, self.p3_duration, None, self.p3_curve, 1, 24)
-        ttk.Separator(control_frame, orient='horizontal').pack(fill='x', pady=10)
-        
-        self.build_graph_settings(control_frame)
-        
-        # Settings Buttons
-        load_conf_btn = ttk.Button(control_frame, text="Load Settings", command=self.load_settings_dialog)
-        load_conf_btn.pack(pady=5, fill=tk.X)
+        self.notebook = ttk.Notebook(self.left_panel)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
 
-        save_conf_btn = ttk.Button(control_frame, text="Save Settings", command=self.save_settings)
-        save_conf_btn.pack(pady=5, fill=tk.X)
+        tab_phases = ttk.Frame(self.notebook, padding=5)
+        tab_labels = ttk.Frame(self.notebook, padding=5)
+        tab_style = ttk.Frame(self.notebook, padding=5)
 
-        # Save Button
-        save_btn = ttk.Button(control_frame, text="Save Picture (PNG)", command=self.save_picture)
-        save_btn.pack(pady=5, fill=tk.X)
+        self.notebook.add(tab_phases, text="Phases")
+        self.notebook.add(tab_labels, text="Labels")
+        self.notebook.add(tab_style, text="Styling")
+
+        # Build Controls in Tabs
+        self.build_phase_controls(tab_phases, "Phase 1", self.p1_name, self.p1_duration, self.p1_milestone, self.p1_curve, 1, 36)
+        ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
+        self.build_phase_controls(tab_phases, "Phase 2", self.p2_name, self.p2_duration, self.p2_milestone, self.p2_curve, 1, 12)
+        ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
+        self.build_phase_controls(tab_phases, "Phase 3", self.p3_name, self.p3_duration, None, self.p3_curve, 1, 24)
+        
+        self.build_graph_settings(tab_labels)
+        self.build_styling_controls(tab_style)
+        
+        # Action Buttons frame at bottom
+        action_frame = ttk.Frame(self.left_panel)
+        action_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=10)
+
+        load_conf_btn = ttk.Button(action_frame, text="Load Settings", command=self.load_settings_dialog)
+        load_conf_btn.pack(pady=2, fill=tk.X)
+
+        save_conf_btn = ttk.Button(action_frame, text="Save Settings", command=self.save_settings)
+        save_conf_btn.pack(pady=2, fill=tk.X)
+
+        save_btn = ttk.Button(action_frame, text="Save Picture (PNG)", command=self.save_picture)
+        save_btn.pack(pady=2, fill=tk.X)
 
         # Matplotlib Setup
         self.fig = Figure(figsize=(7, 5), dpi=100)
@@ -149,6 +182,43 @@ class DevelopmentCurveSimulator:
             
         frame.columnconfigure(1, weight=1)
 
+    def build_styling_controls(self, parent):
+        fonts = ["sans-serif", "serif", "monospace", "Arial", "Times New Roman", "Courier New", "Comic Sans MS"]
+        groups = [
+            ("Main Title", "title"),
+            ("Axes Labels", "axes"),
+            ("Tick Numbers", "ticks"),
+            ("Legend", "legend"),
+            ("Annotations", "annot")
+        ]
+        
+        self.color_buttons = {}
+        for name, key in groups:
+            frame = ttk.LabelFrame(parent, text=name)
+            frame.pack(fill=tk.X, pady=5)
+            
+            ttk.Label(frame, text="Font:").grid(row=0, column=0, sticky=tk.W, padx=2, pady=2)
+            font_cb = ttk.Combobox(frame, textvariable=self.style_fonts[key], values=fonts, width=12)
+            font_cb.grid(row=0, column=1, padx=2, pady=2)
+            font_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plot())
+            font_cb.bind("<KeyRelease>", lambda e: self.update_plot())
+            
+            ttk.Label(frame, text="Size:").grid(row=0, column=2, sticky=tk.W, padx=2, pady=2)
+            size_spin = ttk.Spinbox(frame, from_=6, to=40, textvariable=self.style_sizes[key], width=3, command=self.update_plot)
+            size_spin.grid(row=0, column=3, padx=2, pady=2)
+            size_spin.bind("<KeyRelease>", lambda e: self.update_plot())
+            
+            color_btn = tk.Button(frame, text="Pick Color", bg=self.style_colors[key].get())
+            def set_color(k=key, b=color_btn):
+                code = colorchooser.askcolor(title=f"Choose {k} color", initialcolor=self.style_colors[k].get())[1]
+                if code:
+                    self.style_colors[k].set(code)
+                    b.config(bg=code)
+                    self.update_plot()
+            color_btn.config(command=set_color)
+            color_btn.grid(row=1, column=0, columnspan=4, sticky=tk.EW, padx=2, pady=2)
+            self.color_buttons[key] = color_btn
+
     def generate_curve_segment(self, x_start, x_end, y_start, y_end, curve_shape, num_points=100):
         if x_start == x_end:
             return [x_start], [y_end]
@@ -197,9 +267,21 @@ class DevelopmentCurveSimulator:
         self.ax.axvspan(t2, t3, color='purple', alpha=0.1, label=self.p3_name.get())
 
         # Formatting
-        self.ax.set_title(self.graph_title.get(), fontsize=14, pad=15)
-        self.ax.set_xlabel(self.x_label.get(), fontsize=12)
-        self.ax.set_ylabel(self.y_label.get(), fontsize=12)
+        self.ax.set_title(self.graph_title.get(), 
+                          fontsize=self.style_sizes["title"].get(), 
+                          fontfamily=self.style_fonts["title"].get(), 
+                          color=self.style_colors["title"].get(), pad=15)
+                          
+        self.ax.set_xlabel(self.x_label.get(), 
+                           fontsize=self.style_sizes["axes"].get(), 
+                           fontfamily=self.style_fonts["axes"].get(), 
+                           color=self.style_colors["axes"].get())
+                           
+        self.ax.set_ylabel(self.y_label.get(), 
+                           fontsize=self.style_sizes["axes"].get(), 
+                           fontfamily=self.style_fonts["axes"].get(), 
+                           color=self.style_colors["axes"].get())
+                           
         self.ax.set_xlim(0, t3)
         self.ax.set_ylim(0, 100)
         self.ax.grid(True, linestyle='--', alpha=0.6)
@@ -207,24 +289,38 @@ class DevelopmentCurveSimulator:
         self.ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         self.ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         
+        tick_fontsize = self.style_sizes["ticks"].get()
+        tick_fontfamily = self.style_fonts["ticks"].get()
+        tick_color = self.style_colors["ticks"].get()
+
+        self.ax.tick_params(axis='both', labelsize=tick_fontsize, labelcolor=tick_color)
         if not self.show_x_ticks.get():
             self.ax.tick_params(axis='x', labelbottom=False)
-        else:
-            self.ax.tick_params(axis='x', labelbottom=True)
-        self.ax.legend(loc="upper left")
+
+        for label in self.ax.get_xticklabels() + self.ax.get_yticklabels():
+            label.set_fontfamily(tick_fontfamily)
+
+        leg = self.ax.legend(loc="upper left", prop={'family': self.style_fonts["legend"].get(), 'size': self.style_sizes["legend"].get()})
+        if leg:
+            for text in leg.get_texts():
+                text.set_color(self.style_colors["legend"].get())
 
         # Mark important points
         pts_x = [t1, t2, t3]
         pts_y = [m1, m2, 100]
         labels = [self.pt1_label.get(), self.pt2_label.get(), self.pt3_label.get()]
         
-        self.ax.scatter(pts_x, pts_y, color='red', zorder=5)
+        self.ax.scatter(pts_x, pts_y, color=self.style_colors["annot"].get(), zorder=5)
         
         for i in range(3):
             if labels[i].strip():
                 self.ax.annotate(labels[i], (pts_x[i], pts_y[i]), 
                                  textcoords="offset points", xytext=(0, 10), 
-                                 ha='center', fontsize=10, color='red', weight='bold')
+                                 ha='center', 
+                                 fontsize=self.style_sizes["annot"].get(), 
+                                 fontfamily=self.style_fonts["annot"].get(), 
+                                 color=self.style_colors["annot"].get(), 
+                                 weight='bold')
 
         self.canvas.draw()
 
@@ -264,6 +360,20 @@ class DevelopmentCurveSimulator:
         if "pt2_label" in config: self.pt2_label.set(config["pt2_label"])
         if "pt3_label" in config: self.pt3_label.set(config["pt3_label"])
         if "show_x_ticks" in config: self.show_x_ticks.set(config["show_x_ticks"])
+        
+        if "style_fonts" in config:
+            for k, v in config["style_fonts"].items():
+                if k in self.style_fonts: self.style_fonts[k].set(v)
+        if "style_sizes" in config:
+            for k, v in config["style_sizes"].items():
+                if k in self.style_sizes: self.style_sizes[k].set(v)
+        if "style_colors" in config:
+            for k, v in config["style_colors"].items():
+                if k in self.style_colors: self.style_colors[k].set(v)
+                
+        if hasattr(self, 'color_buttons'):
+            for k, btn in self.color_buttons.items():
+                btn.config(bg=self.style_colors[k].get())
         
         if "window_geometry" in config:
             try:
@@ -363,6 +473,9 @@ class DevelopmentCurveSimulator:
             "pt2_label": self.pt2_label.get(),
             "pt3_label": self.pt3_label.get(),
             "show_x_ticks": self.show_x_ticks.get(),
+            "style_fonts": {k: v.get() for k,v in self.style_fonts.items()},
+            "style_sizes": {k: v.get() for k,v in self.style_sizes.items()},
+            "style_colors": {k: v.get() for k,v in self.style_colors.items()},
             "window_geometry": self.root.geometry()
         }
 
