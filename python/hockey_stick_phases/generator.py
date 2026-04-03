@@ -5,6 +5,7 @@ import json
 import os
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.ticker import MaxNLocator
 
 class DevelopmentCurveSimulator:
     def __init__(self, root):
@@ -36,6 +37,7 @@ class DevelopmentCurveSimulator:
         self.pt1_label = tk.StringVar(value="Alpha")
         self.pt2_label = tk.StringVar(value="Beta")
         self.pt3_label = tk.StringVar(value="Release")
+        self.show_x_ticks = tk.BooleanVar(value=True)
 
         self.active_setting_name = None
         self.clean_state_dict = None
@@ -101,7 +103,7 @@ class DevelopmentCurveSimulator:
 
         # Duration Slider
         ttk.Label(frame, text="Duration (Months):").grid(row=1, column=0, sticky=tk.W, padx=5, pady=2)
-        ttk.Scale(frame, from_=dur_min, to=dur_max, variable=duration_var, command=lambda e: self.update_plot()).grid(row=1, column=1, sticky=tk.EW, padx=5, pady=2)
+        ttk.Scale(frame, from_=dur_min, to=dur_max, variable=duration_var, command=lambda e, v=duration_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=1, column=1, sticky=tk.EW, padx=5, pady=2)
         dur_entry = ttk.Entry(frame, textvariable=duration_var, width=5)
         dur_entry.grid(row=1, column=2, padx=5, pady=2)
         dur_entry.bind("<KeyRelease>", lambda e: self.update_plot())
@@ -109,7 +111,7 @@ class DevelopmentCurveSimulator:
         # Milestone Slider (If applicable)
         if milestone_var:
             ttk.Label(frame, text="End % Done:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=2)
-            ttk.Scale(frame, from_=5, to=95, variable=milestone_var, command=lambda e: self.update_plot()).grid(row=2, column=1, sticky=tk.EW, padx=5, pady=2)
+            ttk.Scale(frame, from_=5, to=95, variable=milestone_var, command=lambda e, v=milestone_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=2, column=1, sticky=tk.EW, padx=5, pady=2)
             mil_entry = ttk.Entry(frame, textvariable=milestone_var, width=5)
             mil_entry.grid(row=2, column=2, padx=5, pady=2)
             mil_entry.bind("<KeyRelease>", lambda e: self.update_plot())
@@ -141,6 +143,9 @@ class DevelopmentCurveSimulator:
             entry = ttk.Entry(frame, textvariable=var)
             entry.grid(row=i, column=1, sticky=tk.EW, padx=5, pady=2)
             entry.bind("<KeyRelease>", lambda e: self.update_plot())
+            
+        chk = ttk.Checkbutton(frame, text="Show Numbers on X Axis", variable=self.show_x_ticks, command=self.update_plot)
+        chk.grid(row=len(settings), column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
             
         frame.columnconfigure(1, weight=1)
 
@@ -196,8 +201,16 @@ class DevelopmentCurveSimulator:
         self.ax.set_xlabel(self.x_label.get(), fontsize=12)
         self.ax.set_ylabel(self.y_label.get(), fontsize=12)
         self.ax.set_xlim(0, t3)
-        self.ax.set_ylim(0, 105) # Slight padding at top
+        self.ax.set_ylim(0, 100)
         self.ax.grid(True, linestyle='--', alpha=0.6)
+        
+        self.ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        self.ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        
+        if not self.show_x_ticks.get():
+            self.ax.tick_params(axis='x', labelbottom=False)
+        else:
+            self.ax.tick_params(axis='x', labelbottom=True)
         self.ax.legend(loc="upper left")
 
         # Mark important points
@@ -250,6 +263,7 @@ class DevelopmentCurveSimulator:
         if "pt1_label" in config: self.pt1_label.set(config["pt1_label"])
         if "pt2_label" in config: self.pt2_label.set(config["pt2_label"])
         if "pt3_label" in config: self.pt3_label.set(config["pt3_label"])
+        if "show_x_ticks" in config: self.show_x_ticks.set(config["show_x_ticks"])
         
         if "window_geometry" in config:
             try:
@@ -348,6 +362,7 @@ class DevelopmentCurveSimulator:
             "pt1_label": self.pt1_label.get(),
             "pt2_label": self.pt2_label.get(),
             "pt3_label": self.pt3_label.get(),
+            "show_x_ticks": self.show_x_ticks.get(),
             "window_geometry": self.root.geometry()
         }
 
