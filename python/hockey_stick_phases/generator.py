@@ -20,15 +20,31 @@ class DevelopmentCurveSimulator:
         self.p1_curve = tk.DoubleVar(value=2.5) # Late blooming
 
         # Variables for Phase 2
+        self.p2_show = tk.BooleanVar(value=True)
         self.p2_name = tk.StringVar(value="Principal Photography")
         self.p2_duration = tk.IntVar(value=3)
         self.p2_milestone = tk.IntVar(value=80)
         self.p2_curve = tk.DoubleVar(value=1.0) # Linear
 
         # Variables for Phase 3
+        self.p3_show = tk.BooleanVar(value=True)
         self.p3_name = tk.StringVar(value="Post-Production")
         self.p3_duration = tk.IntVar(value=9)
+        self.p3_milestone = tk.IntVar(value=95)
         self.p3_curve = tk.DoubleVar(value=0.5) # Early blooming
+
+        # Variables for Phase 4
+        self.p4_show = tk.BooleanVar(value=False)
+        self.p4_name = tk.StringVar(value="Phase 4")
+        self.p4_duration = tk.IntVar(value=6)
+        self.p4_milestone = tk.IntVar(value=98)
+        self.p4_curve = tk.DoubleVar(value=1.0) 
+
+        # Variables for Phase 5
+        self.p5_show = tk.BooleanVar(value=False)
+        self.p5_name = tk.StringVar(value="Phase 5")
+        self.p5_duration = tk.IntVar(value=6)
+        self.p5_curve = tk.DoubleVar(value=1.0) 
 
         # Variables for Graph Settings
         self.graph_title = tk.StringVar(value="Development S-Curve")
@@ -37,6 +53,8 @@ class DevelopmentCurveSimulator:
         self.pt1_label = tk.StringVar(value="Alpha")
         self.pt2_label = tk.StringVar(value="Beta")
         self.pt3_label = tk.StringVar(value="Release")
+        self.pt4_label = tk.StringVar(value="")
+        self.pt5_label = tk.StringVar(value="")
         self.show_x_ticks = tk.BooleanVar(value=True)
 
         # Variables for Text Styling
@@ -98,9 +116,13 @@ class DevelopmentCurveSimulator:
         # Build Controls in Tabs
         self.build_phase_controls(tab_phases, "Phase 1", self.p1_name, self.p1_duration, self.p1_milestone, self.p1_curve, 1, 36)
         ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
-        self.build_phase_controls(tab_phases, "Phase 2", self.p2_name, self.p2_duration, self.p2_milestone, self.p2_curve, 1, 12)
+        self.build_phase_controls(tab_phases, "Phase 2", self.p2_name, self.p2_duration, self.p2_milestone, self.p2_curve, 1, 12, self.p2_show)
         ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
-        self.build_phase_controls(tab_phases, "Phase 3", self.p3_name, self.p3_duration, None, self.p3_curve, 1, 24)
+        self.build_phase_controls(tab_phases, "Phase 3", self.p3_name, self.p3_duration, self.p3_milestone, self.p3_curve, 1, 24, self.p3_show)
+        ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
+        self.build_phase_controls(tab_phases, "Phase 4", self.p4_name, self.p4_duration, self.p4_milestone, self.p4_curve, 1, 24, self.p4_show)
+        ttk.Separator(tab_phases, orient='horizontal').pack(fill='x', pady=5)
+        self.build_phase_controls(tab_phases, "Phase 5", self.p5_name, self.p5_duration, None, self.p5_curve, 1, 24, self.p5_show)
         
         self.build_graph_settings(tab_labels)
         self.build_styling_controls(tab_style)
@@ -124,36 +146,44 @@ class DevelopmentCurveSimulator:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-    def build_phase_controls(self, parent, title, name_var, duration_var, milestone_var, curve_var, dur_min, dur_max):
+    def build_phase_controls(self, parent, title, name_var, duration_var, milestone_var, curve_var, dur_min, dur_max, show_var=None):
         frame = ttk.LabelFrame(parent, text=title)
         frame.pack(fill=tk.X, pady=5)
 
+        row_idx = 0
+        if show_var is not None:
+            ttk.Checkbutton(frame, text="Show Phase", variable=show_var, command=self.update_plot).grid(row=row_idx, column=0, columnspan=3, sticky=tk.W, padx=5, pady=2)
+            row_idx += 1
+
         # Name Input
-        ttk.Label(frame, text="Name:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=2)
+        ttk.Label(frame, text="Name:").grid(row=row_idx, column=0, sticky=tk.W, padx=5, pady=2)
         entry = ttk.Entry(frame, textvariable=name_var)
-        entry.grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=2)
+        entry.grid(row=row_idx, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=2)
         entry.bind("<KeyRelease>", lambda e: self.update_plot())
+        row_idx += 1
 
         # Duration Slider
-        ttk.Label(frame, text="Duration (Months):").grid(row=1, column=0, sticky=tk.W, padx=5, pady=2)
-        ttk.Scale(frame, from_=dur_min, to=dur_max, variable=duration_var, command=lambda e, v=duration_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=1, column=1, sticky=tk.EW, padx=5, pady=2)
+        ttk.Label(frame, text="Duration (Months):").grid(row=row_idx, column=0, sticky=tk.W, padx=5, pady=2)
+        ttk.Scale(frame, from_=dur_min, to=dur_max, variable=duration_var, command=lambda e, v=duration_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=row_idx, column=1, sticky=tk.EW, padx=5, pady=2)
         dur_entry = ttk.Entry(frame, textvariable=duration_var, width=5)
-        dur_entry.grid(row=1, column=2, padx=5, pady=2)
+        dur_entry.grid(row=row_idx, column=2, padx=5, pady=2)
         dur_entry.bind("<KeyRelease>", lambda e: self.update_plot())
+        row_idx += 1
 
         # Milestone Slider (If applicable)
         if milestone_var:
-            ttk.Label(frame, text="End % Done:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=2)
-            ttk.Scale(frame, from_=5, to=95, variable=milestone_var, command=lambda e, v=milestone_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=2, column=1, sticky=tk.EW, padx=5, pady=2)
+            ttk.Label(frame, text="End % Done:").grid(row=row_idx, column=0, sticky=tk.W, padx=5, pady=2)
+            ttk.Scale(frame, from_=5, to=95, variable=milestone_var, command=lambda e, v=milestone_var: (v.set(int(round(float(e)))), self.update_plot())).grid(row=row_idx, column=1, sticky=tk.EW, padx=5, pady=2)
             mil_entry = ttk.Entry(frame, textvariable=milestone_var, width=5)
-            mil_entry.grid(row=2, column=2, padx=5, pady=2)
+            mil_entry.grid(row=row_idx, column=2, padx=5, pady=2)
             mil_entry.bind("<KeyRelease>", lambda e: self.update_plot())
+            row_idx += 1
 
         # Curvature Slider
-        ttk.Label(frame, text="Curvature:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=2)
-        ttk.Scale(frame, from_=0.2, to=5.0, variable=curve_var, command=lambda e: self.update_plot()).grid(row=3, column=1, sticky=tk.EW, padx=5, pady=2)
+        ttk.Label(frame, text="Curvature:").grid(row=row_idx, column=0, sticky=tk.W, padx=5, pady=2)
+        ttk.Scale(frame, from_=0.2, to=5.0, variable=curve_var, command=lambda e: self.update_plot()).grid(row=row_idx, column=1, sticky=tk.EW, padx=5, pady=2)
         curv_entry = ttk.Entry(frame, textvariable=curve_var, width=5)
-        curv_entry.grid(row=3, column=2, padx=5, pady=2)
+        curv_entry.grid(row=row_idx, column=2, padx=5, pady=2)
         curv_entry.bind("<KeyRelease>", lambda e: self.update_plot())
         
         frame.columnconfigure(1, weight=1)
@@ -168,7 +198,9 @@ class DevelopmentCurveSimulator:
             ("Y-Axis:", self.y_label),
             ("Point 1 (P1 End):", self.pt1_label),
             ("Point 2 (P2 End):", self.pt2_label),
-            ("Point 3 (End):", self.pt3_label)
+            ("Point 3:", self.pt3_label),
+            ("Point 4:", self.pt4_label),
+            ("Point 5:", self.pt5_label)
         ]
         
         for i, (label_text, var) in enumerate(settings):
@@ -234,37 +266,59 @@ class DevelopmentCurveSimulator:
 
         # Get current values
         try:
-            d1, d2, d3 = self.p1_duration.get(), self.p2_duration.get(), self.p3_duration.get()
-            m1, m2 = self.p1_milestone.get(), self.p2_milestone.get()
-            c1, c2, c3 = self.p1_curve.get(), self.p2_curve.get(), self.p3_curve.get()
+            phases = [
+                (self.p1_duration.get(), self.p1_name.get(), self.p1_milestone.get(), self.p1_curve.get(), True, self.pt1_label.get()),
+                (self.p2_duration.get(), self.p2_name.get(), self.p2_milestone.get(), self.p2_curve.get(), self.p2_show.get(), self.pt2_label.get()),
+                (self.p3_duration.get(), self.p3_name.get(), self.p3_milestone.get(), self.p3_curve.get(), self.p3_show.get(), self.pt3_label.get()),
+                (self.p4_duration.get(), self.p4_name.get(), self.p4_milestone.get(), self.p4_curve.get(), self.p4_show.get(), self.pt4_label.get()),
+                (self.p5_duration.get(), self.p5_name.get(), 100, self.p5_curve.get(), self.p5_show.get(), self.pt5_label.get())
+            ]
         except tk.TclError:
             return  # Ignore updates if user temporarily inputs invalid letters/empty string
 
-        # Prevent Phase 2 milestone from being lower than Phase 1
-        if m2 <= m1:
-            m2 = m1 + 1 
-            self.p2_milestone.set(m2)
+        active_phases = [p for p in phases if p[4]]
+        if not active_phases:
+            return
 
-        # Calculate time bounds
-        t0 = 0
-        t1 = d1
-        t2 = t1 + d2
-        t3 = t2 + d3
+        # Dynamically set the last phase's milestone to 100
+        last_idx = len(active_phases) - 1
+        last_p = active_phases[last_idx]
+        active_phases[last_idx] = (last_p[0], last_p[1], 100, last_p[3], last_p[4], last_p[5])
 
-        # Generate points for each phase
-        x1, y1 = self.generate_curve_segment(t0, t1, 0, m1, c1)
-        x2, y2 = self.generate_curve_segment(t1, t2, m1, m2, c2)
-        x3, y3 = self.generate_curve_segment(t2, t3, m2, 100, c3)
+        # Enforce progressive milestones
+        for i in range(1, len(active_phases)):
+            prev_m = active_phases[i-1][2]
+            curr_m = active_phases[i][2]
+            if curr_m <= prev_m:
+               curr_m = prev_m + 1
+               if i < len(active_phases) - 1:
+                   active_phases[i] = (active_phases[i][0], active_phases[i][1], curr_m, active_phases[i][3], active_phases[i][4], active_phases[i][5])
 
-        # Plot lines
-        self.ax.plot(x1, y1, color='blue', linewidth=3)
-        self.ax.plot(x2, y2, color='green', linewidth=3)
-        self.ax.plot(x3, y3, color='purple', linewidth=3)
+        colors = ['blue', 'green', 'purple', 'orange', 'red']
+        
+        t_curr = 0
+        m_curr = 0
+        
+        self.pts_x = []
+        self.pts_y = []
+        self.labels = []
 
-        # Shade background phases
-        self.ax.axvspan(t0, t1, color='blue', alpha=0.1, label=self.p1_name.get())
-        self.ax.axvspan(t1, t2, color='green', alpha=0.1, label=self.p2_name.get())
-        self.ax.axvspan(t2, t3, color='purple', alpha=0.1, label=self.p3_name.get())
+        for i, (p_dur, p_name, p_mil, p_curv, p_show, p_label) in enumerate(active_phases):
+            t_next = t_curr + p_dur
+            m_next = p_mil
+            
+            x, y = self.generate_curve_segment(t_curr, t_next, m_curr, m_next, p_curv)
+            self.ax.plot(x, y, color=colors[i % len(colors)], linewidth=3)
+            self.ax.axvspan(t_curr, t_next, color=colors[i % len(colors)], alpha=0.1, label=p_name)
+            
+            self.pts_x.append(t_next)
+            self.pts_y.append(m_next)
+            self.labels.append(p_label)
+            
+            t_curr = t_next
+            m_curr = m_next
+
+        t_total = t_curr
 
         # Formatting
         self.ax.set_title(self.graph_title.get(), 
@@ -282,7 +336,7 @@ class DevelopmentCurveSimulator:
                            fontfamily=self.style_fonts["axes"].get(), 
                            color=self.style_colors["axes"].get())
                            
-        self.ax.set_xlim(0, t3)
+        self.ax.set_xlim(0, t_total)
         self.ax.set_ylim(0, 100)
         self.ax.grid(True, linestyle='--', alpha=0.6)
         
@@ -306,15 +360,11 @@ class DevelopmentCurveSimulator:
                 text.set_color(self.style_colors["legend"].get())
 
         # Mark important points
-        pts_x = [t1, t2, t3]
-        pts_y = [m1, m2, 100]
-        labels = [self.pt1_label.get(), self.pt2_label.get(), self.pt3_label.get()]
+        self.ax.scatter(self.pts_x, self.pts_y, color=self.style_colors["annot"].get(), zorder=5)
         
-        self.ax.scatter(pts_x, pts_y, color=self.style_colors["annot"].get(), zorder=5)
-        
-        for i in range(3):
-            if labels[i].strip():
-                self.ax.annotate(labels[i], (pts_x[i], pts_y[i]), 
+        for i in range(len(self.pts_x)):
+            if self.labels[i].strip():
+                self.ax.annotate(self.labels[i], (self.pts_x[i], self.pts_y[i]), 
                                  textcoords="offset points", xytext=(0, 10), 
                                  ha='center', 
                                  fontsize=self.style_sizes["annot"].get(), 
@@ -343,15 +393,13 @@ class DevelopmentCurveSimulator:
         if "p1_milestone" in config: self.p1_milestone.set(config["p1_milestone"])
         if "p1_curve" in config: self.p1_curve.set(config["p1_curve"])
         
-        if "p2_name" in config: self.p2_name.set(config["p2_name"])
-        if "p2_duration" in config: self.p2_duration.set(config["p2_duration"])
-        if "p2_milestone" in config: self.p2_milestone.set(config["p2_milestone"])
-        if "p2_curve" in config: self.p2_curve.set(config["p2_curve"])
-        
-        if "p3_name" in config: self.p3_name.set(config["p3_name"])
-        if "p3_duration" in config: self.p3_duration.set(config["p3_duration"])
-        if "p3_curve" in config: self.p3_curve.set(config["p3_curve"])
-        
+        for p in ["p2", "p3", "p4", "p5"]:
+            if f"{p}_show" in config: getattr(self, f"{p}_show").set(config[f"{p}_show"])
+            if f"{p}_name" in config: getattr(self, f"{p}_name").set(config[f"{p}_name"])
+            if f"{p}_duration" in config: getattr(self, f"{p}_duration").set(config[f"{p}_duration"])
+            if f"{p}_curve" in config: getattr(self, f"{p}_curve").set(config[f"{p}_curve"])
+            if f"{p}_milestone" in config and hasattr(self, f"{p}_milestone"): getattr(self, f"{p}_milestone").set(config[f"{p}_milestone"])
+            
         if "graph_title" in config: self.graph_title.set(config["graph_title"])
         if "x_label" in config: self.x_label.set(config["x_label"])
         if "y_label" in config: self.y_label.set(config["y_label"])
@@ -359,6 +407,8 @@ class DevelopmentCurveSimulator:
         if "pt1_label" in config: self.pt1_label.set(config["pt1_label"])
         if "pt2_label" in config: self.pt2_label.set(config["pt2_label"])
         if "pt3_label" in config: self.pt3_label.set(config["pt3_label"])
+        if "pt4_label" in config: self.pt4_label.set(config["pt4_label"])
+        if "pt5_label" in config: self.pt5_label.set(config["pt5_label"])
         if "show_x_ticks" in config: self.show_x_ticks.set(config["show_x_ticks"])
         
         if "style_fonts" in config:
@@ -454,30 +504,36 @@ class DevelopmentCurveSimulator:
         listbox.bind("<Double-Button-1>", lambda e: on_load())
 
     def _get_current_settings_dict(self):
-        return {
+        d = {
             "p1_name": self.p1_name.get(),
             "p1_duration": self.p1_duration.get(),
             "p1_milestone": self.p1_milestone.get(),
             "p1_curve": self.p1_curve.get(),
-            "p2_name": self.p2_name.get(),
-            "p2_duration": self.p2_duration.get(),
-            "p2_milestone": self.p2_milestone.get(),
-            "p2_curve": self.p2_curve.get(),
-            "p3_name": self.p3_name.get(),
-            "p3_duration": self.p3_duration.get(),
-            "p3_curve": self.p3_curve.get(),
+        }
+        for p in ["p2", "p3", "p4", "p5"]:
+            d[f"{p}_show"] = getattr(self, f"{p}_show").get()
+            d[f"{p}_name"] = getattr(self, f"{p}_name").get()
+            d[f"{p}_duration"] = getattr(self, f"{p}_duration").get()
+            d[f"{p}_curve"] = getattr(self, f"{p}_curve").get()
+            if hasattr(self, f"{p}_milestone"):
+                d[f"{p}_milestone"] = getattr(self, f"{p}_milestone").get()
+                
+        d.update({
             "graph_title": self.graph_title.get(),
             "x_label": self.x_label.get(),
             "y_label": self.y_label.get(),
             "pt1_label": self.pt1_label.get(),
             "pt2_label": self.pt2_label.get(),
             "pt3_label": self.pt3_label.get(),
+            "pt4_label": self.pt4_label.get(),
+            "pt5_label": self.pt5_label.get(),
             "show_x_ticks": self.show_x_ticks.get(),
             "style_fonts": {k: v.get() for k,v in self.style_fonts.items()},
             "style_sizes": {k: v.get() for k,v in self.style_sizes.items()},
             "style_colors": {k: v.get() for k,v in self.style_colors.items()},
             "window_geometry": self.root.geometry()
-        }
+        })
+        return d
 
     def save_settings(self):
         conf_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generator.conf")
