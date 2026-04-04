@@ -96,8 +96,52 @@ class DevelopmentCurveSimulator:
 
     def setup_ui(self):
         # Main layout frames
-        self.left_panel = ttk.Frame(self.root, padding="10", width=350)
-        self.left_panel.pack(side=tk.LEFT, fill=tk.Y)
+        left_container = ttk.Frame(self.root, width=370)
+        left_container.pack(side=tk.LEFT, fill=tk.Y)
+        left_container.pack_propagate(False)
+        
+        self.left_canvas = tk.Canvas(left_container, highlightthickness=0)
+        self.left_scrollbar = ttk.Scrollbar(left_container, orient="vertical", command=self.left_canvas.yview)
+        
+        self.left_panel = ttk.Frame(self.left_canvas, padding="10")
+        
+        self.left_panel.bind(
+            "<Configure>",
+            lambda e: self.left_canvas.configure(
+                scrollregion=self.left_canvas.bbox("all")
+            )
+        )
+        
+        self.canvas_window = self.left_canvas.create_window((0, 0), window=self.left_panel, anchor="nw")
+        
+        self.left_canvas.bind(
+            '<Configure>', 
+            lambda e: self.left_canvas.itemconfig(self.canvas_window, width=e.width)
+        )
+        
+        self.left_canvas.configure(yscrollcommand=self.left_scrollbar.set)
+        
+        self.left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.left_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_mousewheel(event):
+            if hasattr(event, 'num') and event.num == 5 or event.delta < 0:
+                self.left_canvas.yview_scroll(1, "units")
+            elif hasattr(event, 'num') and event.num == 4 or event.delta > 0:
+                self.left_canvas.yview_scroll(-1, "units")
+
+        def _bind_mouse_wheel(event):
+            self.left_canvas.bind_all("<Button-4>", _on_mousewheel)
+            self.left_canvas.bind_all("<Button-5>", _on_mousewheel)
+            self.left_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_mouse_wheel(event):
+            self.left_canvas.unbind_all("<Button-4>")
+            self.left_canvas.unbind_all("<Button-5>")
+            self.left_canvas.unbind_all("<MouseWheel>")
+
+        self.left_canvas.bind("<Enter>", _bind_mouse_wheel)
+        self.left_canvas.bind("<Leave>", _unbind_mouse_wheel)
         
         self.plot_frame = ttk.Frame(self.root, padding="10")
         self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -129,7 +173,7 @@ class DevelopmentCurveSimulator:
         
         # Action Buttons frame at bottom
         action_frame = ttk.Frame(self.left_panel)
-        action_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=10)
+        action_frame.pack(fill=tk.X, pady=10)
 
         load_conf_btn = ttk.Button(action_frame, text="Load Settings", command=self.load_settings_dialog)
         load_conf_btn.pack(pady=2, fill=tk.X)
