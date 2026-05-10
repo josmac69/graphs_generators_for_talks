@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Change to the directory where the script is located (cross-platform support for UI launches)
+# Change to the directory where the script is located
 cd "$(dirname "$0")"
+
 # Terminate script on any error
 set -e
 
